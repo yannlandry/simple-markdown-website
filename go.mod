@@ -1,4 +1,4 @@
-module github.com/yannlandry/yannlandry.photography
+module github.com/yannlandry/simple-markdown-website
 
 go 1.17
 

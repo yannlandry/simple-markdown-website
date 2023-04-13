@@ -4,7 +4,7 @@
 *.dll
 *.so
 *.dylib
-yannlandry.photography
+simple-markdown-website
 
 # Test binary, built with `go test -c`
 *.test

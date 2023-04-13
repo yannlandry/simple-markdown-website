@@ -14,12 +14,16 @@ var (
 )
 
 type TemplateBuilder struct {
-	base string
+	base      string
+	BaseURL   *URLBuilder
+	StaticURL *URLBuilder
 }
 
 func NewTemplateBuilder(base string) *TemplateBuilder {
 	return &TemplateBuilder{
-		base: base,
+		base:      base,
+		BaseURL:   nil,
+		StaticURL: nil,
 	}
 }
 
@@ -29,22 +33,13 @@ func (this *TemplateBuilder) Load(paths ...string) (*template.Template, error) {
 
 	functions := template.FuncMap{
 		"baseURL": func(extension string) string {
-			return BaseURL.With(extension)
+			return this.BaseURL.With(extension)
 		},
 		"staticURL": func(extension string) string {
-			return StaticURL.With(extension)
+			return this.StaticURL.With(extension)
 		},
 		"concat": func(elements ...string) string {
 			return strings.Join(elements, "")
-		},
-		"formatDate": func(date time.Time) string {
-			return FormatDate(date)
-		},
-		"plainDate": func(date time.Time) string {
-			return PlainDate(date)
-		},
-		"prettyDate": func(date time.Time) string {
-			return PrettyDate(date)
 		},
 		"urlEscape": func(text string) string {
 			return url.QueryEscape(text)

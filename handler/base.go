@@ -1,18 +1,18 @@
 package handler
 
 import (
-	"github.com/yannlandry/yannlandry.photography/content"
+	"github.com/yannlandry/simple-markdown-website/content"
 )
 
 type BasePresenter struct {
-	WindowTitle string
-	Navigation  *content.NavigationContent
-	Content     interface{}
+	WindowTitle   string
+	Configuration *content.Configuration
+	Presenter     interface{}
 }
 
-func NewBasePresenter(presenter interface{}) *BasePresenter {
+func NewBasePresenter(configuration *content.Configuration, presenter interface{}) *BasePresenter {
 	return &BasePresenter{
-		Navigation: content.Content.Navigation,
-		Content:    presenter,
+		Configuration: configuration,
+		Presenter:     presenter,
 	}
 }

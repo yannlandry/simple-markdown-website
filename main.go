@@ -7,67 +7,82 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/yannlandry/yannlandry.photography/content"
-	"github.com/yannlandry/yannlandry.photography/handler"
-	"github.com/yannlandry/yannlandry.photography/util"
+	"github.com/yannlandry/simple-markdown-website/content"
+	"github.com/yannlandry/simple-markdown-website/handler"
+	"github.com/yannlandry/simple-markdown-website/util"
 )
 
 func main() {
-	log.Println("Starting yannlandry.photography...")
+	log.Println("Starting Simple Markdown Website...")
 
-	// Command-line arguments
-	var contentPath string
-	flag.StringVar(&contentPath, "content-path", "", "Path to the repository defining the website's content")
-	var baseURL string
-	flag.StringVar(&baseURL, "base-url", "", "URL of the website to be prepended to links")
-	var staticURL string
-	flag.StringVar(&staticURL, "static-url", "", "URL of static assets to be prepended to images, stylesheets, etc.")
+	// Command-line arguments.
+	var rootRaw string
+	flag.StringVar(&rootRaw, "root", "", "Path to the directory defining the website's content.")
+	var baseURLRaw string
+	flag.StringVar(&baseURLRaw, "base-url", "", "URL of the website to be prepended to links.")
+	var staticURLRaw string
+	flag.StringVar(&staticURLRaw, "static-url", "", "URL of static assets to be prepended to images, stylesheets, etc.")
 	var port int
-	flag.IntVar(&port, "port", 8080, "Port on which the Golang app should listen")
+	flag.IntVar(&port, "port", 8080, "Port on which the Golang app should listen.")
 	flag.Parse()
 
-	// Check command-line arguments
-	if contentPath == "" {
-		log.Fatalln("`--content-path` is a required argument.")
+	// Check command-line arguments.
+	if rootRaw == "" {
+		log.Fatalln("`--root` is a required argument.")
 	}
-	if baseURL == "" {
+	if baseURLRaw == "" {
 		log.Fatalln("`--base-url` is a required argument.")
 	}
-	if staticURL == "" {
+	if staticURLRaw == "" {
 		log.Fatalln("`--static-url` is a required argument.")
 	}
 
-	// Instantiate `URLBuilder`s
+	// Convert the content path to a smart path.
+	root := util.NewPath(rootRaw)
+
+	// Instantiate `URLBuilder`s.
 	var err error
-	if util.BaseURL, err = util.NewURLBuilder(baseURL); err != nil {
+	var baseURL *util.URLBuilder
+	var staticURL *util.URLBuilder
+	if baseURL, err = util.NewURLBuilder(baseURLRaw); err != nil {
 		log.Fatalf("Failed parsing the base URL: %s\n", err)
 	}
-	if util.StaticURL, err = util.NewURLBuilder(staticURL); err != nil {
+	if staticURL, err = util.NewURLBuilder(staticURLRaw); err != nil {
 		log.Fatalf("Failed parsing the static URL: %s\n", err)
 	}
 
 	// Instantiate markdown renderer
 	util.Markdown = util.NewMarkdownEngine(util.BaseURL, util.StaticURL)
 
-	// Load website content
-	if err := content.Content.Load(contentPath); err != nil {
-		log.Fatalf("Failed loading the website content: %s\n", err)
+	// Load configuration.
+	config := content.NewConfiguration()
+	if err := config.Load(root); err != nil {
+		log.Fatalf("Failed loading the website configuration: %s\n", err)
 	}
-	log.Println("Done loading content.")
+	log.Println("Done loading configuration.")
 
-	// Router
+	// Load pages.
+	pages := content.NewPages()
+	if err := pages.Load(root, config); err != nil {
+		log.Fatalf("Failed loading pages: %s\n", err)
+	}
+	log.Println("Done loading pages.")
+
+	// Load base template and create builder.
+	builder := util.NewTemplateBuilder(root.With(config.Templates.Base))
+	builder.BaseURL = baseURL
+	builder.StaticURL = staticURL
+
+	// Handler factory.
+	handlers := handler.NewHandlerFactory(root, config, pages, builder)
+
+	// Router.
 	router := mux.NewRouter()
-	router.HandleFunc("/", handler.Home)
-	router.HandleFunc("/blog", handler.Blog)
-	router.HandleFunc("/blog/", handler.Blog)
-	router.HandleFunc("/blog/{slug}", handler.BlogPost)
-	router.HandleFunc("/blog/{slug}/", handler.BlogPost)
-	router.HandleFunc("/blog/keyword/{keyword}", handler.BlogKeyword)
-	router.HandleFunc("/blog/keyword/{keyword}/", handler.BlogKeyword)
-	router.HandleFunc("/{slug}", handler.Page)
-	router.HandleFunc("/{slug}/", handler.Page)
+	router.HandleFunc("/", handlers.Page())
+	router.HandleFunc("/{slug}", handlers.Page())
+	router.HandleFunc("/{slug}/", handlers.Page())
 
-	// Server
+	// Server.
 	server := &http.Server{
 		Handler: router,
 		Addr:    fmt.Sprintf(":%d", port),
