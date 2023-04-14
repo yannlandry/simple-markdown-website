@@ -23,7 +23,7 @@ type MarkdownEngine struct {
 
 func NewMarkdownEngine(baseURL *URLBuilder, staticURL *URLBuilder) *MarkdownEngine {
 	options := mdhtml.RendererOptions{
-		RenderNodeHook: processNode,
+		RenderNodeHook: processNode(baseURL, staticURL),
 	}
 
 	return &MarkdownEngine{
@@ -39,21 +39,23 @@ func (this *MarkdownEngine) Render(content []byte) []byte {
 	return mdcore.ToHTML(content, parser, this.renderer)
 }
 
-func processNode(writer io.Writer, node mdast.Node, entering bool) (mdast.WalkStatus, bool) {
-	if h, ok := node.(*mdast.Heading); ok && entering {
-		processHeading(h)
-	}
-	if p, ok := node.(*mdast.Paragraph); ok && entering {
-		processParagraph(p)
-	}
-	if a, ok := node.(*mdast.Link); ok && entering {
-		processLink(a)
-	}
-	if img, ok := node.(*mdast.Image); ok && entering {
-		processImage(img)
-	}
+func processNode(baseURL *URLBuilder, staticURL *URLBuilder) func(io.Writer, mdast.Node, bool) (mdast.WalkStatus, bool) {
+	return func(writer io.Writer, node mdast.Node, entering bool) (mdast.WalkStatus, bool) {
+		if h, ok := node.(*mdast.Heading); ok && entering {
+			processHeading(h)
+		}
+		if p, ok := node.(*mdast.Paragraph); ok && entering {
+			processParagraph(p)
+		}
+		if a, ok := node.(*mdast.Link); ok && entering {
+			processLink(a, baseURL)
+		}
+		if img, ok := node.(*mdast.Image); ok && entering {
+			processImage(img, staticURL)
+		}
 
-	return mdast.GoToNext, false
+		return mdast.GoToNext, false
+	}
 }
 
 func processHeading(h *mdast.Heading) {
@@ -100,21 +102,21 @@ func processParagraph(p *mdast.Paragraph) {
 	p.SetChildren(children[2:])
 }
 
-func processLink(a *mdast.Link) {
+func processLink(a *mdast.Link, baseURL *URLBuilder) {
 	// Prepend all local URLs with the base URL, except anchor links
 	if len(a.Destination) > 0 && a.Destination[0] != '#' {
-		destination := BaseURL.With(string(a.Destination))
+		destination := baseURL.With(string(a.Destination))
 		a.Destination = []byte(destination)
 		// If the link is external, open it in a new tab
-		if !strings.HasPrefix(destination, BaseURL.Get()) {
+		if !strings.HasPrefix(destination, baseURL.Get()) {
 			a.AdditionalAttributes = []string{"target=\"_blank\""}
 		}
 	}
 }
 
-func processImage(img *mdast.Image) {
+func processImage(img *mdast.Image, staticURL *URLBuilder) {
 	// Prepend all images with the static URL
-	img.Destination = []byte(StaticURL.With(string(img.Destination)))
+	img.Destination = []byte(staticURL.With(string(img.Destination)))
 }
 
 func addAttribute(node mdast.Node) {

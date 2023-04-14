@@ -52,7 +52,7 @@ func main() {
 	}
 
 	// Instantiate markdown renderer
-	util.Markdown = util.NewMarkdownEngine(util.BaseURL, util.StaticURL)
+	util.Markdown = util.NewMarkdownEngine(baseURL, staticURL)
 
 	// Load configuration.
 	config := content.NewConfiguration()

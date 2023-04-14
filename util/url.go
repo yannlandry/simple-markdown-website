@@ -6,11 +6,6 @@ import (
 	"path"
 )
 
-var (
-	BaseURL   *URLBuilder
-	StaticURL *URLBuilder
-)
-
 type URLBuilder struct {
 	base *url.URL
 }
