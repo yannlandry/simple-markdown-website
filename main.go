@@ -78,9 +78,12 @@ func main() {
 
 	// Router.
 	router := mux.NewRouter()
-	router.HandleFunc("/", handlers.Page())
-	router.HandleFunc("/{slug}", handlers.Page())
-	router.HandleFunc("/{slug}/", handlers.Page())
+	for slug, _ := range config.Pages {
+		router.HandleFunc("/" + slug, handlers.Page(slug))
+	}
+	for slug, forward := range config.Proxies {
+		router.HandleFunc("/proxy/" + slug, handlers.Proxy(forward))
+	}
 
 	// Server.
 	server := &http.Server{

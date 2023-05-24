@@ -23,6 +23,7 @@ type TemplatesConfiguration struct {
 type Configuration struct {
 	Navigation []*NavigationConfiguration     `yaml:"Navigation"`
 	Pages      map[string]*PagesConfiguration `yaml:"Pages"`
+	Proxies    map[string]string              `yaml:"Proxies"`
 	Templates  TemplatesConfiguration         `yaml:"Templates"`
 }
 
